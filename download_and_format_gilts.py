@@ -7,7 +7,7 @@ to converting it to a properly formatted CSV file.
 import os
 import sys
 import csv
-import time
+import glob
 import random
 import xlrd
 import asyncio
@@ -44,7 +44,7 @@ async def download_gilts_data(date_str=None):
         # Launch a browser with a realistic viewport and user agent
         browser_type = p.chromium  # Can also use p.firefox or p.webkit
         
-        # Use a browser context with various options to appear more human-like
+        # Use a browser context with options to appear more human-like
         browser = await browser_type.launch(headless=False)  # Set to True for headless mode
         
         # Create a context with specific options
@@ -53,11 +53,7 @@ async def download_gilts_data(date_str=None):
             user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             accept_downloads=True,
             locale='en-GB',
-            timezone_id='Europe/London',
-            # Add additional human-like characteristics
-            device_scale_factor=1.0,
-            has_touch=False,
-            is_mobile=False
+            timezone_id='Europe/London'
         )
         
         # Add some human-like behaviors
@@ -108,19 +104,17 @@ async def download_gilts_data(date_str=None):
             except Exception as e:
                 print(f"Error handling cookie popup: {e}")
             
-            # Debug: Let's check what form elements are available
+            # Identify form elements on the page
             print("Analyzing page elements...")
             form_elements = await page.evaluate("""
                 () => {
                     const inputs = Array.from(document.querySelectorAll('input'));
-                    return inputs.map(input => {
-                        return {
-                            id: input.id,
-                            name: input.name,
-                            type: input.type,
-                            placeholder: input.placeholder
-                        };
-                    });
+                    return inputs.map(input => ({
+                        id: input.id,
+                        name: input.name,
+                        type: input.type,
+                        placeholder: input.placeholder
+                    }));
                 }
             """)
             print(f"Found form elements: {form_elements}")
@@ -144,18 +138,16 @@ async def download_gilts_data(date_str=None):
             # Listen for download events
             page.on('download', handle_download)
             
-            # Debug: Let's find all buttons on the page
+            # Find all buttons on the page
             print("Finding Excel button...")
             buttons = await page.evaluate("""
                 () => {
                     const buttons = Array.from(document.querySelectorAll('button, input[type="button"], a.button, .btn'));
-                    return buttons.map(button => {
-                        return {
-                            text: button.innerText || button.value,
-                            id: button.id,
-                            class: button.className
-                        };
-                    });
+                    return buttons.map(button => ({
+                        text: button.innerText || button.value,
+                        id: button.id,
+                        class: button.className
+                    }));
                 }
             """)
             print(f"Found buttons: {buttons}")
@@ -182,12 +174,7 @@ async def download_gilts_data(date_str=None):
                         break
                 
             if excel_button:
-                # Move mouse to button with human-like motion
-                await page.mouse.move(
-                    random.uniform(0, 100), 
-                    random.uniform(0, 100), 
-                    steps=random.randint(5, 10)
-                )
+                # Click the button directly - no need for human-like motion
                 
                 # Click the button
                 await excel_button.click()
@@ -376,7 +363,7 @@ async def main():
         excel_file = await download_gilts_data(yesterday_str)
         
         if excel_file and os.path.exists(excel_file):
-            # Try to verify if we got a real Excel file
+            # Verify if we got a real Excel file
             file_type = os.popen(f"file '{excel_file}'").read().strip()
             print(f"File type: {file_type}")
             
@@ -384,7 +371,7 @@ async def main():
                 print("Warning: Downloaded file appears to be HTML, not Excel.")
                 print("Bot protection may still be active.")
                 return
-            elif "Excel" in file_type or "Microsoft" in file_type or "Zip archive" in file_type or "Composite Document File" in file_type:
+            elif any(ft in file_type for ft in ["Excel", "Microsoft", "Zip archive", "Composite Document File"]):
                 print("Success! Downloaded a valid Excel file.")
             
             # Step 2: Format the Excel file to CSV
@@ -407,8 +394,5 @@ async def main():
         traceback.print_exc()
 
 if __name__ == "__main__":
-    # Add missing import for glob
-    import glob
-    
     # Run the main async function
     asyncio.run(main())
