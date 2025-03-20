@@ -112,7 +112,8 @@ def format_gilts_csv(excel_file=None, output_dir=None):
         
         # Write to CSV
         with open(csv_path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
+            # Use csv.QUOTE_ALL to ensure all fields are quoted
+            writer = csv.writer(csvfile, quoting=csv.QUOTE_ALL)
             
             # Row 1: Title row from Excel
             writer.writerow([str(sheet.cell_value(0, j)).strip() for j in range(sheet.ncols)])
@@ -136,7 +137,7 @@ def format_gilts_csv(excel_file=None, output_dir=None):
                 if row_values[0] in ['Ultra-Short', 'Short', 'Medium', 'Long']:
                     continue
                 
-                # Write all other rows as-is
+                # Write all other rows with quoting
                 writer.writerow(row_values)
         
         print(f"Successfully converted to CSV: {csv_path}")
